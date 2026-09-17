@@ -27,6 +27,12 @@ only starts after a human confirms it.
 
 See [dealflow-agent/README.md](dealflow-agent/README.md).
 
+## Data sources and tools
+
+Every external source and service (CoreSignal, LinkedIn exports, Claude, n8n,
+Twenty, Unipile and others), with costs, limits and the options we rejected:
+[DATA-SOURCES.md](DATA-SOURCES.md).
+
 ## Data
 
 Every fund, person, and company in this repository is fictional. Domains end
