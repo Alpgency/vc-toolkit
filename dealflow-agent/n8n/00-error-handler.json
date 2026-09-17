@@ -1,0 +1,57 @@
+{
+  "name": "Dealflow Agent · 00 · Error handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "0b808f7a-4f9e-4519-b416-33daa0ec1863",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "YOUR_FROM_ADDRESS",
+        "toEmail": "YOUR_ALERT_ADDRESS",
+        "subject": "={{ 'Dealflow agent error: ' + ($json.workflow ? $json.workflow.name : 'unknown workflow') }}",
+        "emailFormat": "text",
+        "text": "={{ 'Workflow: ' + ($json.workflow ? $json.workflow.name : '?') + '\\nExecution: ' + ($json.execution ? $json.execution.id : '?') + '\\nNode: ' + ($json.execution && $json.execution.lastNodeExecuted ? $json.execution.lastNodeExecuted : '?') + '\\nError: ' + ($json.execution && $json.execution.error ? $json.execution.error.message : '?') + '\\n\\n' + ($json.execution && $json.execution.url ? $json.execution.url : 'no execution URL') }}",
+        "options": {}
+      },
+      "id": "b5e4a0b2-3506-48e7-9063-d51c5800cab7",
+      "name": "Email alert",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        220,
+        0
+      ],
+      "webhookId": "e0fcf928-9265-40cb-8af9-a5fd20e7046c",
+      "credentials": {
+        "smtp": {
+          "name": "SMTP"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Email alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,157 @@
+{
+  "name": "Dealflow Agent · 03 · Booking",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dealflow-booking",
+        "options": {}
+      },
+      "id": "e72b6467-e569-4ab1-bfe7-f89e00f289b8",
+      "name": "Cal.com webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "0cbb74da-9732-4d78-8718-5d7535a125b1",
+      "notes": "Point a Cal.com webhook (BOOKING_CREATED) at this URL. Any booking tool that can POST attendee name/email works with a small change to the next Code node."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://twenty-server:3000/rest/opportunities?limit=60&depth=1",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "69f03a4e-66f8-4be5-9806-b49b987c0fa9",
+      "name": "Twenty · list opportunities",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        200,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Twenty API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const wh = $('Cal.com webhook').first().json;\nif (wh.body && wh.body.triggerEvent && wh.body.triggerEvent !== 'BOOKING_CREATED') return [];\nconst payload = (wh.body && wh.body.payload) || {};\nconst attendee = ((payload.attendees || [])[0]) || {};\nconst body = $input.first().json;\nconst opps = (body.data && (body.data.opportunities || Object.values(body.data)[0])) || [];\nconst active = opps.filter(o => o.stage === 'SEQUENCE_RUNNING' || o.stage === 'REPLIED');\nif (!active.length) return [];\nconst norm = (s) => (typeof s === 'string' ? s : '').toLowerCase().replace(/[^a-z]/g, '');\nconst aName = norm(attendee.name);\nconst aEmail = (attendee.email || '').toLowerCase();\nconst personOf = (o) => o.pointOfContact || null;\nlet match = null;\nlet matchedBy = 'recency';\nif (aName || aEmail) {\n  match = active.find(o => {\n    const p = personOf(o);\n    if (!p) return false;\n    const pn = p.name && typeof p.name === 'object' ? norm((p.name.firstName || '') + (p.name.lastName || '')) : norm(p.name);\n    const pe = ((p.emails && p.emails.primaryEmail) || '').toLowerCase();\n    return (aEmail && pe && aEmail === pe) || (aName && pn && (pn.includes(aName) || aName.includes(pn)));\n  }) || null;\n  if (match) matchedBy = 'attendee';\n}\nif (!match) {\n  active.sort((a, b) => new Date(a.updatedAt || 0) - new Date(b.updatedAt || 0));\n  match = active[active.length - 1];\n}\nreturn [{ json: {\n  dealId: match.id,\n  dealName: match.name || 'Deal',\n  attendeeName: attendee.name || 'The founder',\n  when: payload.startTime || '',\n  matchedBy,\n} }];"
+      },
+      "id": "5baff80a-895e-41cc-acc7-9c266902f890",
+      "name": "Find active sequence deal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://twenty-server:3000/rest/opportunities/{{ $json.dealId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ stage: 'FIRST_MEETING' }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "8ccc64f3-72b3-4e2b-a196-b216ec7323ac",
+      "name": "Twenty · stage = First meeting",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        600,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Twenty API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ '🎉 ' + $('Find active sequence deal').item.json.attendeeName + ' booked a meeting (' + $('Find active sequence deal').item.json.dealName + '). Deal moved to First meeting (matched by ' + $('Find active sequence deal').item.json.matchedBy + ').' }}",
+        "additionalFields": {}
+      },
+      "id": "be671e2a-101e-4c9c-b741-6e9a70cabd81",
+      "name": "Telegram · booked",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        800,
+        0
+      ],
+      "webhookId": "5f957b0b-60ac-43fa-9930-7a5c6ffd8cbe",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Cal.com webhook": {
+      "main": [
+        [
+          {
+            "node": "Twenty · list opportunities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Twenty · list opportunities": {
+      "main": [
+        [
+          {
+            "node": "Find active sequence deal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find active sequence deal": {
+      "main": [
+        [
+          {
+            "node": "Twenty · stage = First meeting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Twenty · stage = First meeting": {
+      "main": [
+        [
+          {
+            "node": "Telegram · booked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

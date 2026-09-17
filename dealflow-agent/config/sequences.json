@@ -1,0 +1,31 @@
+{
+  "_note": "EXAMPLE outreach copy. EDIT before use. The runtime copy lives inline in n8n 02 \"Build variant + confirm\". Add other languages as <lang>_<variant> keys (intake tags the language); missing languages fall back to en.",
+  "placeholders": {
+    "{f}": "founder first name",
+    "{c}": "company name",
+    "{b}": "booking link (Config node)",
+    "{obs}": "observation, filled from the CRM one-liner",
+    "{mutual}": "introducer",
+    "{fund}": "fund name (Config node)",
+    "{sender}": "sender name (Config node)"
+  },
+  "variant_rules": "referred -> warm_intro; stealth -> stealth; hot -> high_profile; otherwise active",
+  "variants": {
+    "en_stealth": [
+      "Hi {f},\n\nI heard you are starting something new and would like to learn more when you are ready to share.\n\nQuick context: I work at {fund}, an early-stage fund investing in B2B software, fintech infrastructure and developer tools, with first tickets of 250k to 1M EUR.\n\nOpen to a short chat?\n\nBest,\n{sender}",
+      "Hi {f},\n\nFollowing up on my note. If a conversation makes sense, you can pick a time here: {b}\n\nBest,\n{sender}"
+    ],
+    "en_active": [
+      "Hi {f},\n\nI have been following {c}. This caught my attention: {obs}\n\nAt {fund} we back pre-seed and seed teams in B2B software. I would like to understand what you are building and what you are focused on right now.\n\nWould you have 20 minutes?\n\nBest,\n{sender}",
+      "Hi {f},\n\nFollowing up on my note. If a conversation makes sense, you can pick a time here: {b}\n\nBest,\n{sender}"
+    ],
+    "en_high_profile": [
+      "Hi {f},\n\nI have been following what you are building at {c}. This stood out: {obs}\n\nAt {fund} we invest early and decide quickly when we have conviction. If you are open to it, you can book 20 to 30 minutes here: {b}\n\nBest,\n{sender}",
+      "Hi {f},\n\nWanted to follow up. {c} keeps coming up on our side and I would still like to talk.\n\nIf you have 20 minutes in the coming weeks: {b}\n\nBest,\n{sender}"
+    ],
+    "en_warm_intro": [
+      "Hi {f},\n\n{mutual} suggested I reach out about {c}.\n\nI took a closer look and this stood out: {obs}\n\nAt {fund} we back early-stage B2B software teams. Happy to find a time that works for you.\n\nBest,\n{sender}",
+      "Hi {f},\n\nFollowing up on my note. If a conversation makes sense, you can pick a time here: {b}\n\nBest,\n{sender}"
+    ]
+  }
+}

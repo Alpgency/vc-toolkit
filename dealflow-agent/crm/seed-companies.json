@@ -1,0 +1,246 @@
+{
+  "_comment": "FICTIONAL companies for testing the pipeline. Names, people and notes are invented; .example domains never resolve. stage values are the labels from crm/twenty_common.py STAGES.",
+  "companies": [
+    {
+      "name": "Quillory",
+      "domain": "quillory.example",
+      "one_liner": "Accounts payable automation for mid-market finance teams",
+      "geo": "DE",
+      "round": "seed",
+      "language": "en",
+      "stealth": false,
+      "hot": false,
+      "score": 78,
+      "stage": "Shortlist",
+      "founder": {
+        "first": "Maren",
+        "last": "Vogt",
+        "title": "CEO"
+      },
+      "notes": "Seed round: raising 2M EUR, lead not yet named. Founders: CEO ex finance operations lead at a logistics group (9y); CTO ex staff engineer at a payments company. KPIs: ARR 410k EUR (Jun), 2.8x YoY; 38 paying customers; logo churn 1 in 12 months; NRR 112%. Moat: supplier network data from processed invoices, ERP integrations. Market: EU mid-market AP spend is fragmented, e-invoicing mandates as tailwind. Risk: crowded category, possible overlap with portfolio company Sample Ledger Co."
+    },
+    {
+      "name": "Kelpforge",
+      "domain": "kelpforge.example",
+      "one_liner": "Carbon accounting API for logistics platforms",
+      "geo": "SE",
+      "round": "pre-seed",
+      "language": "en",
+      "stealth": false,
+      "hot": false,
+      "score": 72,
+      "stage": "Shortlist",
+      "founder": {
+        "first": "Ines",
+        "last": "Holm",
+        "title": "CEO"
+      },
+      "notes": "Pre-seed: raising 900k EUR on a SAFE. Founders: CEO ex product lead at a freight marketplace; CTO ex data engineer at an energy utility. KPIs: 6 design partners, 2 paid pilots at 18k EUR each, API calls 1.4M/month. Moat: emissions factor dataset curated per transport lane. Market: reporting regulation pushes shippers to measure scope 3. Risk: pricing power unproven."
+    },
+    {
+      "name": "Tessaloop",
+      "domain": "tessaloop.example",
+      "one_liner": "Usage-based billing for API-first companies",
+      "geo": "NL",
+      "round": "seed",
+      "language": "en",
+      "stealth": false,
+      "hot": false,
+      "score": 70,
+      "stage": "Shortlist",
+      "founder": {
+        "first": "Joris",
+        "last": "Brandt",
+        "title": "CEO"
+      },
+      "notes": "Seed: raising 3M EUR, 1M committed from angels. Founders: CEO second-time founder (previous company acquired); CTO ex billing platform engineer. KPIs: ARR 260k EUR, 14 customers, gross margin 81%. Moat: metering SDKs embedded in customer code. Market: shift from seats to usage pricing. Risk: long sales cycles with larger accounts."
+    },
+    {
+      "name": "Brambleware",
+      "domain": "brambleware.example",
+      "one_liner": "Rostering and shift swaps for outpatient clinics",
+      "geo": "ES",
+      "round": "seed",
+      "language": "en",
+      "stealth": false,
+      "hot": false,
+      "score": 64,
+      "stage": "New",
+      "founder": {
+        "first": "Lucia",
+        "last": "Ferrer",
+        "title": "CEO"
+      }
+    },
+    {
+      "name": "Norrow Labs",
+      "domain": "norrowlabs.example",
+      "one_liner": "Demand-response software for commercial buildings",
+      "geo": "FI",
+      "round": "seed",
+      "language": "en",
+      "stealth": false,
+      "hot": false,
+      "score": 61,
+      "stage": "New",
+      "founder": {
+        "first": "Aino",
+        "last": "Korpela",
+        "title": "CEO"
+      }
+    },
+    {
+      "name": "Pivvle",
+      "domain": "pivvle.example",
+      "one_liner": "Returns management API for online retailers",
+      "geo": "GB",
+      "round": "pre-seed",
+      "language": "en",
+      "stealth": false,
+      "hot": false,
+      "score": 57,
+      "stage": "New",
+      "founder": {
+        "first": "Owen",
+        "last": "Pryce",
+        "title": "CEO"
+      }
+    },
+    {
+      "name": "Vellumcast",
+      "domain": "vellumcast.example",
+      "one_liner": "Stealth developer tooling project",
+      "geo": "FR",
+      "round": "pre-seed",
+      "language": "en",
+      "stealth": true,
+      "hot": false,
+      "score": 55,
+      "stage": "New",
+      "founder": {
+        "first": "Remy",
+        "last": "Castel",
+        "title": "Founder"
+      }
+    },
+    {
+      "name": "Glimmerdesk",
+      "domain": "glimmerdesk.example",
+      "one_liner": "Test data generation for regulated software teams",
+      "geo": "PT",
+      "round": "pre-seed",
+      "language": "en",
+      "stealth": false,
+      "hot": false,
+      "score": 52,
+      "stage": "New",
+      "founder": {
+        "first": "Tiago",
+        "last": "Moura",
+        "title": "CEO"
+      }
+    },
+    {
+      "name": "Zentrail",
+      "domain": "zentrail.example",
+      "one_liner": "Contract-to-cash workflows for B2B marketplaces",
+      "geo": "DE",
+      "round": "seed",
+      "language": "en",
+      "stealth": false,
+      "hot": true,
+      "score": 69,
+      "stage": "Reach out",
+      "founder": {
+        "first": "Lena",
+        "last": "Hartig",
+        "title": "CEO"
+      }
+    },
+    {
+      "name": "Flintmoor",
+      "domain": "flintmoor.example",
+      "one_liner": "Identity posture management for mid-size companies",
+      "geo": "US",
+      "round": "seed",
+      "language": "en",
+      "stealth": false,
+      "hot": false,
+      "score": 66,
+      "stage": "Sequence running",
+      "founder": {
+        "first": "Dana",
+        "last": "Whitlock",
+        "title": "CEO"
+      }
+    },
+    {
+      "name": "Orrery Ops",
+      "domain": "orreryops.example",
+      "one_liner": "Incident timelines for platform engineering teams",
+      "geo": "IE",
+      "round": "seed",
+      "language": "en",
+      "stealth": false,
+      "hot": false,
+      "score": 62,
+      "stage": "Replied",
+      "founder": {
+        "first": "Ciara",
+        "last": "Nolan",
+        "title": "CEO"
+      }
+    },
+    {
+      "name": "Mossgate",
+      "domain": "mossgate.example",
+      "one_liner": "Compliance evidence collection for fintech startups",
+      "geo": "BE",
+      "round": "seed",
+      "language": "en",
+      "stealth": false,
+      "hot": false,
+      "score": 67,
+      "stage": "First meeting",
+      "founder": {
+        "first": "Pieter",
+        "last": "Claes",
+        "title": "CEO"
+      }
+    },
+    {
+      "name": "Saltmarsh Robotics",
+      "domain": "saltmarshrobotics.example",
+      "one_liner": "Autonomous warehouse picking robots",
+      "geo": "DK",
+      "round": "seed",
+      "language": "en",
+      "stealth": false,
+      "hot": false,
+      "score": 0,
+      "stage": "Out of scope",
+      "founder": {
+        "first": "Freja",
+        "last": "Lund",
+        "title": "CEO"
+      }
+    },
+    {
+      "name": "Luckwheel",
+      "domain": "luckwheel.example",
+      "one_liner": "Real-money casual gaming app",
+      "geo": "MT",
+      "round": "seed",
+      "language": "en",
+      "stealth": false,
+      "hot": false,
+      "score": 0,
+      "stage": "Out of scope",
+      "founder": {
+        "first": "Marco",
+        "last": "Vella",
+        "title": "CEO"
+      }
+    }
+  ]
+}

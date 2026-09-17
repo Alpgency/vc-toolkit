@@ -1,0 +1,1027 @@
+{
+  "name": "Dealflow Agent · 02 · Outbound",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "seconds",
+              "secondsInterval": 20
+            }
+          ]
+        }
+      },
+      "id": "f8237177-00a8-4356-a180-af73a77195bc",
+      "name": "Every 20s",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "notes": "Polls Twenty for deals in Reach out and dedupes via workflow static data. A Twenty webhook could replace the poll."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "dsn",
+              "value": "YOUR_UNIPILE_DSN",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "account_id",
+              "value": "YOUR_UNIPILE_LINKEDIN_ACCOUNT_ID",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "booking_link",
+              "value": "https://cal.com/YOUR_HANDLE/intro",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "fund_name",
+              "value": "Example Ventures",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "sender_name",
+              "value": "YOUR_NAME",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d2151eec-7da2-493a-a116-53ece3baa977",
+      "name": "Config (EDIT ME)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://twenty-server:3000/rest/opportunities?filter=stage[eq]:REACH_OUT&limit=60",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "8ceca9c5-5759-4b2e-94ac-e80b2c85ac7e",
+      "name": "Twenty · list opportunities",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        400,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Twenty API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const sd = $getWorkflowStaticData('global');\nsd.processed = sd.processed || [];\nconst body = $input.first().json;\nconst opps = (body.data && (body.data.opportunities || Object.values(body.data)[0])) || [];\nfor (const o of opps) {\n  if (o.stage !== 'REACH_OUT') continue;\n  if (sd.processed.includes(o.id)) continue;\n  if (!o.companyId || !o.pointOfContactId) continue;\n  sd.processed.push(o.id);\n  return [{ json: {\n    dealId: o.id,\n    dealName: o.name || 'Deal',\n    companyId: o.companyId,\n    personId: o.pointOfContactId,\n    tags: o.tags || '',\n    oneLiner: o.oneLiner || '',\n  } }];\n}\nreturn [];"
+      },
+      "id": "3a60eb1e-16a2-4759-a390-be305e48c2e1",
+      "name": "Pick next Reach out deal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://twenty-server:3000/rest/people/{{ $json.personId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "e34105a1-4497-4768-8b41-25b4fe4a0733",
+      "name": "Twenty · get founder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        800,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Twenty API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://twenty-server:3000/rest/companies/{{ $('Pick next Reach out deal').item.json.companyId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "c13b743f-1fda-4579-978c-ff7b589bf1e4",
+      "name": "Twenty · get company",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1000,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Twenty API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const pick = $('Pick next Reach out deal').first().json;\nconst pBody = $('Twenty · get founder').first().json;\nconst person = (pBody.data && (pBody.data.person || Object.values(pBody.data)[0])) || {};\nconst cBody = $('Twenty · get company').first().json;\nconst company = (cBody.data && (cBody.data.company || Object.values(cBody.data)[0])) || {};\nconst cfg = $('Config (EDIT ME)').first().json;\nconst nameVal = person.name || {};\nconst first = nameVal.firstName || 'there';\nconst full = ((nameVal.firstName || '') + ' ' + (nameVal.lastName || '')).trim() || first;\nlet linkedinUrl = (person.linkedinLink && person.linkedinLink.primaryLinkUrl) || null;\nlet foundVia = 'record';\nlet searchNote = '';\nif (!linkedinUrl) {\n  try {\n    const sr = $('Unipile · search founder').first().json;\n    const items = (sr.items || []).filter(i => (i.type || '').toUpperCase() === 'PEOPLE');\n    if (items.length) {\n      const hit = items[0];\n      linkedinUrl = hit.profile_url || (hit.public_identifier ? 'https://www.linkedin.com/in/' + hit.public_identifier + '/' : null);\n      foundVia = 'linkedin_search';\n      searchNote = '\\nFound via live LinkedIn search: ' + (hit.headline || 'no headline') + (hit.network_distance ? ' (' + hit.network_distance + ')' : '');\n    }\n  } catch (e) {}\n}\nconst compName = company.name || pick.dealName.split(' (')[0];\nconst tags = String(pick.tags || '').split(',');\n// Variant rules: referred -> warm_intro; stealth -> stealth; hot -> high_profile; else active.\nconst variant = tags.includes('referred') ? 'warm_intro' : tags.includes('stealth') ? 'stealth' : tags.includes('hot') ? 'high_profile' : 'active';\nconst obs = pick.oneLiner || 'what you are building';\nconst mutual = 'A mutual contact';\n// EDIT ME: outreach copy mirrors config/sequences.json. Placeholders: {f} founder first name,\n// {c} company, {b} booking link, {obs} observation (filled from the CRM one-liner),\n// {mutual} introducer, {fund} and {sender} from the Config node.\nconst SEQ = {\n  \"en_stealth\": [\n    \"Hi {f},\\n\\nI heard you are starting something new and would like to learn more when you are ready to share.\\n\\nQuick context: I work at {fund}, an early-stage fund investing in B2B software, fintech infrastructure and developer tools, with first tickets of 250k to 1M EUR.\\n\\nOpen to a short chat?\\n\\nBest,\\n{sender}\",\n    \"Hi {f},\\n\\nFollowing up on my note. If a conversation makes sense, you can pick a time here: {b}\\n\\nBest,\\n{sender}\"\n  ],\n  \"en_active\": [\n    \"Hi {f},\\n\\nI have been following {c}. This caught my attention: {obs}\\n\\nAt {fund} we back pre-seed and seed teams in B2B software. I would like to understand what you are building and what you are focused on right now.\\n\\nWould you have 20 minutes?\\n\\nBest,\\n{sender}\",\n    \"Hi {f},\\n\\nFollowing up on my note. If a conversation makes sense, you can pick a time here: {b}\\n\\nBest,\\n{sender}\"\n  ],\n  \"en_high_profile\": [\n    \"Hi {f},\\n\\nI have been following what you are building at {c}. This stood out: {obs}\\n\\nAt {fund} we invest early and decide quickly when we have conviction. If you are open to it, you can book 20 to 30 minutes here: {b}\\n\\nBest,\\n{sender}\",\n    \"Hi {f},\\n\\nWanted to follow up. {c} keeps coming up on our side and I would still like to talk.\\n\\nIf you have 20 minutes in the coming weeks: {b}\\n\\nBest,\\n{sender}\"\n  ],\n  \"en_warm_intro\": [\n    \"Hi {f},\\n\\n{mutual} suggested I reach out about {c}.\\n\\nI took a closer look and this stood out: {obs}\\n\\nAt {fund} we back early-stage B2B software teams. Happy to find a time that works for you.\\n\\nBest,\\n{sender}\",\n    \"Hi {f},\\n\\nFollowing up on my note. If a conversation makes sense, you can pick a time here: {b}\\n\\nBest,\\n{sender}\"\n  ]\n};\n// Language comes from the first tag (set at intake). Falls back to English when no copy exists for it.\nconst lang = /^[a-z]{2}$/.test(tags[0]) ? tags[0] : 'en';\nconst key = SEQ[lang + '_' + variant] ? lang + '_' + variant : 'en_' + variant;\nconst fill = (s) => s.split('{f}').join(first).split('{c}').join(compName).split('{b}').join(cfg.booking_link).split('{obs}').join(obs).split('{mutual}').join(mutual).split('{fund}').join(cfg.fund_name).split('{sender}').join(cfg.sender_name);\nconst msg1 = fill(SEQ[key][0]);\nconst msg2 = fill(SEQ[key][1]);\nlet handle = null;\nif (linkedinUrl && linkedinUrl.includes('/in/')) handle = linkedinUrl.split('/in/')[1].split(/[/?#]/)[0];\nconst confirmText = 'Ready to start outreach for ' + compName + '\\n\\nFounder: ' + full + '\\nLinkedIn: ' + (linkedinUrl || 'NOT FOUND, will abort') + searchNote + '\\nSequence variant: ' + key + '\\n\\nMessage 1:\\n' + msg1 + '\\n\\nFollow-up (sent after the Wait node delay if no reply):\\n' + msg2;\nreturn [{ json: { ...pick, first, full, compName, linkedinUrl, handle, foundVia, key, msg1, msg2, confirmText } }];\n"
+      },
+      "id": "e4cf7a93-a18d-42e5-b631-8565fc51fc6b",
+      "name": "Build variant + confirm",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "message": "={{ $json.confirmText }}",
+        "responseType": "approval",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "buttonApprovalLabel": "Yes, start outreach",
+            "buttonDisapprovalLabel": "No, skip"
+          }
+        },
+        "options": {
+          "limitWaitTime": true,
+          "resumeAmount": 45,
+          "resumeUnit": "minutes"
+        }
+      },
+      "id": "ea978fd1-c04e-4cbf-9c9c-8e6da7f270a4",
+      "name": "Telegram · confirm founder",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1400,
+        0
+      ],
+      "webhookId": "5584bd0a-57d9-484c-8b07-d84b2b745be3",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram Bot"
+        }
+      },
+      "notes": "Human gate: nothing is sent to LinkedIn until a partner approves the founder and the drafted messages. Uses send-and-wait, so no second Telegram webhook is needed."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "ap1",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "ap2",
+              "leftValue": "={{ $('Build variant + confirm').item.json.handle || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cdf170a3-9c84-4b85-81a3-a010001887ef",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1600,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://{{ $('Config (EDIT ME)').item.json.dsn }}/api/v1/users/{{ $('Build variant + confirm').item.json.handle }}?account_id={{ $('Config (EDIT ME)').item.json.account_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "59e4f402-e2f5-48f2-9e6a-3ab0512f079c",
+      "name": "Unipile · resolve profile",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1800,
+        -100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Unipile API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://{{ $('Config (EDIT ME)').item.json.dsn }}/api/v1/chats",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "contentType": "multipart-form-data",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "account_id",
+              "value": "={{ $('Config (EDIT ME)').item.json.account_id }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $('Build variant + confirm').item.json.msg1 }}"
+            },
+            {
+              "name": "attendees_ids",
+              "value": "={{ $('Unipile · resolve profile').item.json.provider_id }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "076e2fdc-9924-483b-89c8-a93267961cd0",
+      "name": "Unipile · send message 1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2000,
+        -100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Unipile API"
+        }
+      },
+      "notes": "Classic 1st-degree DM through the connected LinkedIn account (no InMail)."
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://twenty-server:3000/rest/opportunities/{{ $('Build variant + confirm').item.json.dealId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ stage: 'SEQUENCE_RUNNING' }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "8b845bfa-5851-4865-8ae5-f3d9ff38f6fc",
+      "name": "Twenty · stage = Sequence running",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2200,
+        -100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Twenty API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ 'Message 1 sent to ' + $('Build variant + confirm').item.json.full + ' on LinkedIn. Deal moved to Sequence running. Follow-up after the wait unless they reply.' }}",
+        "additionalFields": {}
+      },
+      "id": "31b05d58-45dd-447e-b971-c2d4d5e4636c",
+      "name": "Telegram · sequence started",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2400,
+        -100
+      ],
+      "webhookId": "387828e1-40ec-470c-8b5c-c47f49e91fc9",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "unit": "minutes",
+        "amount": 2
+      },
+      "id": "2c53dbe2-bbc6-499f-aaa3-6f1bd01f7c15",
+      "name": "Wait 2 min",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2600,
+        -100
+      ],
+      "webhookId": "e346eca0-8909-4915-b3e0-074da3f8ea79",
+      "notes": "Short for testing. For real use set this to days and widen the reply window in the Replied? nodes to match."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://{{ $('Config (EDIT ME)').item.json.dsn }}/api/v1/chats/{{ $('Unipile · send message 1').item.json.chat_id }}/messages?limit=10",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "94e67b98-cd6b-489e-821c-6d7b9b3a8d51",
+      "name": "Unipile · check replies",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2800,
+        -100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Unipile API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "rp1",
+              "leftValue": "={{ (($json.items || []).filter(m => (m.is_sender === 0 || m.is_sender === false) && new Date(m.timestamp).getTime() > Date.now() - 10*60*1000)).length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "933f7131-a8e6-4dea-84c4-e82193c3d6f8",
+      "name": "Replied?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3000,
+        -100
+      ],
+      "notes": "Counts only incoming messages newer than the window (10 minutes here). Keep the window at least as long as the preceding Wait."
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://twenty-server:3000/rest/opportunities/{{ $('Build variant + confirm').item.json.dealId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ stage: 'REPLIED' }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "6fee54ee-7aab-4434-a0c7-7c65a57220bb",
+      "name": "Twenty · stage = Replied",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3220,
+        -220
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Twenty API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $('Build variant + confirm').item.json.full + ' replied! Sequence stopped, deal moved to Replied.' }}",
+        "additionalFields": {}
+      },
+      "id": "a069c584-0738-4e4d-bdd3-917e002123a5",
+      "name": "Telegram · they replied",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3440,
+        -220
+      ],
+      "webhookId": "6c94996d-bb4a-458f-8aae-ba78b7e36d42",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://{{ $('Config (EDIT ME)').item.json.dsn }}/api/v1/chats/{{ $('Unipile · send message 1').item.json.chat_id }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "contentType": "multipart-form-data",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $('Build variant + confirm').item.json.msg2 }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "da30b8d0-42ad-4da0-bcbf-7883cd8039f8",
+      "name": "Unipile · send follow-up",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3220,
+        20
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Unipile API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ 'Follow-up with the booking link sent to ' + $('Build variant + confirm').item.json.full + '. Waiting for a booking.' }}",
+        "additionalFields": {}
+      },
+      "id": "ff8e5b5e-6644-441d-84a6-4ae151a7b0c7",
+      "name": "Telegram · follow-up sent",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3440,
+        20
+      ],
+      "webhookId": "7cdf631c-aafa-4028-9555-ec0beecfda54",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ 'Outreach for ' + $('Build variant + confirm').item.json.compName + ' skipped. Move the deal back to Reach out to retry (after clearing it from the processed list).' }}",
+        "additionalFields": {}
+      },
+      "id": "6d3f6b04-a02e-4787-8d08-f91bec6063dd",
+      "name": "Telegram · skipped",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1800,
+        140
+      ],
+      "webhookId": "71431b4f-dc74-4864-a9a2-2af836cf3ba1",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "li1",
+              "leftValue": "={{ JSON.stringify($('Twenty · get founder').item.json).includes('linkedin.com/in/') }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8c9e0c78-4750-43d8-a115-004d7ae922cc",
+      "name": "Has LinkedIn URL?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1080,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://{{ $('Config (EDIT ME)').item.json.dsn }}/api/v1/linkedin/search?account_id={{ $('Config (EDIT ME)').item.json.account_id }}&limit=3",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ api: 'classic', category: 'people', keywords: (((Object.values($('Twenty · get founder').item.json.data)[0] || {}).name || {}).firstName + ' ' + (((Object.values($('Twenty · get founder').item.json.data)[0] || {}).name || {}).lastName || '') + ' ' + $('Pick next Reach out deal').item.json.dealName.split(' (')[0]).trim() }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "da6228a6-6961-41bd-8582-6966e978928a",
+      "name": "Unipile · search founder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1080,
+        320
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Unipile API"
+        }
+      },
+      "notes": "Fallback when research found no LinkedIn URL: classic people search through the connected account. The top hit goes to the human confirm card, never straight to a send."
+    },
+    {
+      "parameters": {
+        "unit": "minutes",
+        "amount": 2
+      },
+      "id": "fb7fb15a-2cd9-4718-90ed-c5e7037d3058",
+      "name": "Wait 2 min more",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3660,
+        20
+      ],
+      "webhookId": "ccdee649-c818-49ef-a870-e864485b9b7f",
+      "notes": "Short for testing. For real use set this to days and widen the reply window in Replied late? to match."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://{{ $('Config (EDIT ME)').item.json.dsn }}/api/v1/chats/{{ $('Unipile · send message 1').item.json.chat_id }}/messages?limit=10",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "66b017a9-c8a9-47e3-bb63-d8527849a389",
+      "name": "Unipile · check replies again",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3880,
+        20
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Unipile API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "rl1",
+              "leftValue": "={{ (($json.items || []).filter(m => (m.is_sender === 0 || m.is_sender === false) && new Date(m.timestamp).getTime() > Date.now() - 10*60*1000)).length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "af2c704c-7945-4af9-b0cf-c1192374014e",
+      "name": "Replied late?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4100,
+        20
+      ],
+      "notes": "Counts only incoming messages newer than the window (10 minutes here). Keep the window at least as long as the preceding Wait."
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://twenty-server:3000/rest/people/{{ $('Build variant + confirm').item.json.personId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ linkedinLink: { primaryLinkUrl: $('Build variant + confirm').item.json.linkedinUrl } }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "a2bf33cc-b682-406b-89ee-08df8234c07f",
+      "name": "Twenty · save LinkedIn",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1900,
+        -100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Twenty API"
+        }
+      },
+      "notes": "Writes the resolved founder LinkedIn URL back to the CRM record. Idempotent when the URL came from the record itself."
+    }
+  ],
+  "connections": {
+    "Every 20s": {
+      "main": [
+        [
+          {
+            "node": "Config (EDIT ME)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config (EDIT ME)": {
+      "main": [
+        [
+          {
+            "node": "Twenty · list opportunities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Twenty · list opportunities": {
+      "main": [
+        [
+          {
+            "node": "Pick next Reach out deal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick next Reach out deal": {
+      "main": [
+        [
+          {
+            "node": "Twenty · get founder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Twenty · get founder": {
+      "main": [
+        [
+          {
+            "node": "Twenty · get company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build variant + confirm": {
+      "main": [
+        [
+          {
+            "node": "Telegram · confirm founder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram · confirm founder": {
+      "main": [
+        [
+          {
+            "node": "Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved?": {
+      "main": [
+        [
+          {
+            "node": "Unipile · resolve profile",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram · skipped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unipile · send message 1": {
+      "main": [
+        [
+          {
+            "node": "Twenty · stage = Sequence running",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Twenty · stage = Sequence running": {
+      "main": [
+        [
+          {
+            "node": "Telegram · sequence started",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram · sequence started": {
+      "main": [
+        [
+          {
+            "node": "Wait 2 min",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 2 min": {
+      "main": [
+        [
+          {
+            "node": "Unipile · check replies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unipile · check replies": {
+      "main": [
+        [
+          {
+            "node": "Replied?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replied?": {
+      "main": [
+        [
+          {
+            "node": "Twenty · stage = Replied",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unipile · send follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Twenty · stage = Replied": {
+      "main": [
+        [
+          {
+            "node": "Telegram · they replied",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unipile · send follow-up": {
+      "main": [
+        [
+          {
+            "node": "Telegram · follow-up sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Twenty · get company": {
+      "main": [
+        [
+          {
+            "node": "Has LinkedIn URL?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has LinkedIn URL?": {
+      "main": [
+        [
+          {
+            "node": "Build variant + confirm",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unipile · search founder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unipile · search founder": {
+      "main": [
+        [
+          {
+            "node": "Build variant + confirm",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram · follow-up sent": {
+      "main": [
+        [
+          {
+            "node": "Wait 2 min more",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 2 min more": {
+      "main": [
+        [
+          {
+            "node": "Unipile · check replies again",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unipile · check replies again": {
+      "main": [
+        [
+          {
+            "node": "Replied late?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replied late?": {
+      "main": [
+        [
+          {
+            "node": "Twenty · stage = Replied",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unipile · resolve profile": {
+      "main": [
+        [
+          {
+            "node": "Twenty · save LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Twenty · save LinkedIn": {
+      "main": [
+        [
+          {
+            "node": "Unipile · send message 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

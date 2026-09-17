@@ -1,0 +1,243 @@
+{
+  "name": "Dealflow Agent · 04 · Weekly shortlist",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "dealflow-shortlist",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "979f64ad-3a3f-4ed5-9ec9-4bd2f08e941e",
+      "name": "Shortlist trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "603249ca-8e76-46b9-a6a7-c6c264f90286",
+      "notes": "Manual GET trigger. Swap for a Schedule trigger (for example weekly) once the format is right."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://twenty-server:3000/rest/opportunities?limit=60&depth=1",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "cfc736ae-b3fc-476b-b404-380fe0968e7c",
+      "name": "Twenty · list opportunities",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        200,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Twenty API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json;\nconst opps = (body.data && (body.data.opportunities || Object.values(body.data)[0])) || [];\nconst shortlist = opps.filter(o => o.stage === 'SHORTLIST');\nif (!shortlist.length) return [{ json: { empty: true, doc: 'No deals in Shortlist this week.' } }];\nconst items = shortlist.map(o => {\n  const comp = o.company || {};\n  const p = o.pointOfContact || {};\n  const pName = p.name && typeof p.name === 'object' ? ((p.name.firstName || '') + ' ' + (p.name.lastName || '')).trim() : (p.name || '');\n  return {\n    company: comp.name || (o.name || '').split(' (')[0],\n    domain: (comp.domainName && comp.domainName.primaryLinkUrl) || '',\n    deal: o.name,\n    board_score: o.score,\n    tags: o.tags || '',\n    one_liner: o.oneLiner || '',\n    founder: pName + (p.jobTitle ? ' (' + p.jobTitle + ')' : ''),\n    notes: o.notes || '(no notes in CRM)',\n  };\n});\nreturn [{ json: { empty: false, items } }];"
+      },
+      "id": "d65fbbce-9065-40a8-981e-055a525d1a3a",
+      "name": "Collect shortlist",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nif (j.empty) return [{ json: { skip: true, doc: j.doc } }];\n// EDIT ME: the memo format your investment committee reads.\nconst SYSTEM = \"You format a weekly deal shortlist for an investment committee. Input: CRM records with internal notes for each shortlisted company. Use ONLY facts present in the input, never invent numbers. If a data point is missing, write \\\"not disclosed\\\".\\n\\nFor EACH company output this structure, plain text, no markdown:\\n\\n<COMPANY NAME> (<round>)\\nSector: one line\\nWhat they do: two short sentences\\nRound: type, size, valuation and lead investor if known\\nTraction:\\n- metrics with dates where available\\nTeam:\\n- role and relevant background per founder\\nMarket: one or two sentences\\nDefensibility:\\n- short bullets\\nRisks:\\n- short bullets\\nBoard score: <board_score>/100\\n\\nSeparate companies with a line of 30 dashes. Keep each company block under 900 characters. Start the doc with: WEEKLY SHORTLIST, <count> companies\";\nconst requestBody = {\n  model: 'claude-opus-4-8',\n  max_tokens: 6000,\n  thinking: { type: 'adaptive' },\n  system: SYSTEM,\n  messages: [{ role: 'user', content: JSON.stringify(j.items) }],\n};\nreturn [{ json: { skip: false, requestBody } }];\n"
+      },
+      "id": "432f38d1-99c2-4f15-b15d-40c3f67fd887",
+      "name": "Build Claude request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.requestBody) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "ebe481c1-bd8b-4d76-b3d5-1ecff2bacf56",
+      "name": "Claude · format shortlist",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        800,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Anthropic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('Build Claude request').first().json;\nif (prev.skip) return [{ json: { doc: prev.doc } }];\nconst resp = $input.first().json;\nif (resp.error) return [{ json: { doc: 'Shortlist error: ' + ((resp.error.message || '').slice(0, 200)) } }];\nconst texts = (resp.content || []).filter(b => b.type === 'text').map(b => b.text);\nconst doc = (texts[texts.length - 1] || '').trim() || 'Shortlist error: empty model output';\nreturn [{ json: { doc } }];"
+      },
+      "id": "1fa30a5d-8d7e-411d-906e-04348e680d28",
+      "name": "Extract doc",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.doc.slice(0, 4000) }}",
+        "additionalFields": {}
+      },
+      "id": "037e10ae-0d8b-40df-8d13-90741e1e2a8b",
+      "name": "Telegram · send shortlist",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        0
+      ],
+      "onError": "continueRegularOutput",
+      "webhookId": "22fb69af-8038-4bb6-b17a-726cbde65f0d",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { doc: $('Extract doc').first().json.doc } }];"
+      },
+      "id": "599cde5a-2715-4d57-b0d8-678f9e6f64e9",
+      "name": "Respond",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Shortlist trigger": {
+      "main": [
+        [
+          {
+            "node": "Twenty · list opportunities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Twenty · list opportunities": {
+      "main": [
+        [
+          {
+            "node": "Collect shortlist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect shortlist": {
+      "main": [
+        [
+          {
+            "node": "Build Claude request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Claude request": {
+      "main": [
+        [
+          {
+            "node": "Claude · format shortlist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude · format shortlist": {
+      "main": [
+        [
+          {
+            "node": "Extract doc",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract doc": {
+      "main": [
+        [
+          {
+            "node": "Telegram · send shortlist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram · send shortlist": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

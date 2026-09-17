@@ -1,0 +1,27 @@
+Alpgency Internal Use License
+
+Copyright (c) 2026 Alpgency
+
+The source code in this repository is published so you can read it, run it,
+and change it for your own organization's internal use.
+
+You may:
+- use, copy, and modify the code inside your own organization;
+- run it on your own infrastructure for your own investment activity.
+
+You may not:
+- sell, sublicense, or distribute the code or modified versions of it;
+- offer it, or a product substantially based on it, as a hosted service or
+  as consulting deliverables to third parties.
+
+Any copy you keep must include this license.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+For any other use, contact alejandro@alpgency.xyz.

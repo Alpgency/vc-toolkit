@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Partner network graph</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="wrap">
+
+<header>
+  <p class="eyebrow">Partner network / synthetic demo data</p>
+  <h1>Who on the team can open a door into company X?</h1>
+  <p class="muted">
+    The fund and its partners are confirmed. Everyone around them is inferred
+    from documented employment overlap (same company, overlapping dates) and
+    shown as likely knows, never as fact. Every person and company on this
+    page is fictional.
+  </p>
+</header>
+
+<section id="ask">
+  <h2>Ask the graph</h2>
+  <form class="askform" id="askForm" autocomplete="off">
+    <input type="text" id="askInput" maxlength="400"
+           placeholder="Who can get us into Sunmesa Energy?"
+           aria-label="Ask the graph a question">
+    <button type="submit" id="askBtn">Ask</button>
+  </form>
+  <p class="muted small">Needs the ask server (<code>node ask/server.mjs</code>). Click a name in an answer to light its route.</p>
+  <div class="askanswers" id="askAnswers" aria-live="polite"></div>
+</section>
+
+<section id="graph">
+  <div class="graphwrap">
+    <div>
+      <div class="gbar">
+        <button type="button" id="clearPath">Clear</button>
+        <button type="button" id="reheat">Re-layout</button>
+      </div>
+      <div class="graph">
+        <svg id="g" viewBox="0 0 900 620" role="img"
+             aria-label="Force directed graph: the fund at the centre, its partners around it, and the colleagues they likely know from employment overlap. Edge thickness follows connection strength."></svg>
+      </div>
+    </div>
+    <aside class="gpanel" id="panel"></aside>
+  </div>
+  <div class="glegend">
+    <span><i class="l-fund"></i>Fund</span>
+    <span><i class="l-op"></i>Partner</span>
+    <span><i class="l-strong"></i>Strong likely</span>
+    <span><i class="l-possible"></i>Possible</span>
+    <span>Edge width follows strength</span>
+  </div>
+  <dl class="coverage" id="netstats"></dl>
+</section>
+
+<section id="tiers">
+  <h2>How to read an edge</h2>
+  <p class="muted">
+    Working at the same company at the same time is a proxy for knowing
+    someone, not proof. That is why the tiers exist.
+  </p>
+  <div class="tiers">
+    <article class="tier">
+      <p class="tier__name">Confirmed</p>
+      <p>Fund-to-partner edges, and a partner's own current board or advisory seats. Nothing here is inferred.</p>
+      <p class="tier__count"><span data-tier-count="confirmed">0</span> edges</p>
+    </article>
+    <article class="tier">
+      <p class="tier__name">Strong likely</p>
+      <p>Long, senior overlap on the same side of the org. Stays likely knows until a real connection record replaces it.</p>
+      <p class="tier__count"><span data-tier-count="strong">0</span> edges</p>
+    </article>
+    <article class="tier">
+      <p class="tier__name">Possible</p>
+      <p>Shorter windows, bigger orgs, adjacent functions. Check before anyone leans on it.</p>
+      <p class="tier__count"><span data-tier-count="possible">0</span> edges</p>
+    </article>
+  </div>
+
+  <h3>How an edge is scored</h3>
+  <ul class="score">
+    <li><b>35%</b> Overlap length: years together, full marks at four or more</li>
+    <li><b>20%</b> Seniority proximity: same band 1.0, one apart 0.6, further 0.2</li>
+    <li><b>15%</b> Function match: shared function words in the two titles</li>
+    <li><b>15%</b> Recency: full inside five years, fading to 0.2 at twenty-five</li>
+    <li><b>15%</b> Company size, inverted: under 500 people 1.0, over 10,000 0.2</li>
+  </ul>
+  <p class="muted">
+    0.6 and up is strong likely, 0.3 to 0.6 is possible, under 0.3 the edge is
+    deleted. A route's strength is the product of its edges, so a short weak
+    route loses to a longer strong one.
+  </p>
+</section>
+
+</main>
+<script src="../data/network-data.js" defer></script>
+<script src="graph.js" defer></script>
+<script src="ask.js" defer></script>
+</body>
+</html>

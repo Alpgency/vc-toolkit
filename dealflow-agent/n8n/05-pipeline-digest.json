@@ -1,0 +1,145 @@
+{
+  "name": "Dealflow Agent · 05 · Pipeline digest",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "dealflow-digest",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "78ed59c2-4ee1-4f3b-b695-1b3930e6129f",
+      "name": "Digest trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "9f5fcaf4-6005-4adc-96d1-c2c4c9ca0599",
+      "notes": "Manual GET trigger. Swap for a Schedule trigger (for example Monday 09:00)."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://twenty-server:3000/rest/opportunities?limit=60",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "fbf3e31b-36fb-4f98-bee6-e5b7dcad55e3",
+      "name": "Twenty · list opportunities",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        200,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Twenty API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json;\nconst opps = (body.data && (body.data.opportunities || Object.values(body.data)[0])) || [];\nconst byStage = {};\nfor (const o of opps) (byStage[o.stage] = byStage[o.stage] || []).push(o);\nconst n = (s) => (byStage[s] || []).length;\nconst names = (s, max = 3) => (byStage[s] || []).slice(0, max).map(o => (o.name || '').replace(/ \\((pre-)?seed\\)$/i, '')).join(', ');\nconst weekAgo = Date.now() - 7 * 24 * 3600 * 1000;\nconst fresh = opps.filter(o => o.createdAt && new Date(o.createdAt).getTime() > weekAgo);\nconst L = [];\nL.push('📋 Pipeline digest');\nL.push('');\nL.push(`• ${n('NEW')} in New waiting for review`);\nL.push(`• ${fresh.length} added this week`);\nif (n('REACH_OUT')) L.push(`• ${n('REACH_OUT')} flagged for reach out: ${names('REACH_OUT')}`);\nif (n('SEQUENCE_RUNNING')) L.push(`• ${n('SEQUENCE_RUNNING')} sequence running: ${names('SEQUENCE_RUNNING')}`);\nif (n('REPLIED')) L.push(`• ${n('REPLIED')} replied and waiting on you: ${names('REPLIED')}`);\nif (n('FIRST_MEETING')) L.push(`• ${n('FIRST_MEETING')} first meeting booked: ${names('FIRST_MEETING')}`);\nL.push(`• ${n('SHORTLIST')} in Shortlist`);\nL.push(`• ${n('OUT_OF_SCOPE')} filed out of scope`);\nreturn [{ json: { digest: L.join('\\n') } }];"
+      },
+      "id": "aa8e79cf-615b-4d36-ae80-3da32a89fe58",
+      "name": "Build digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.digest }}",
+        "additionalFields": {}
+      },
+      "id": "2cf47a85-4477-4a34-8bf4-2cd9c75a85a2",
+      "name": "Telegram · send digest",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        600,
+        0
+      ],
+      "onError": "continueRegularOutput",
+      "webhookId": "0dda8661-e6cf-4558-b305-eed4b6bc3b7b",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { digest: $('Build digest').first().json.digest } }];"
+      },
+      "id": "6f91f75c-8324-49aa-9c1e-a61fda06e975",
+      "name": "Respond",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Digest trigger": {
+      "main": [
+        [
+          {
+            "node": "Twenty · list opportunities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Twenty · list opportunities": {
+      "main": [
+        [
+          {
+            "node": "Build digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build digest": {
+      "main": [
+        [
+          {
+            "node": "Telegram · send digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram · send digest": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

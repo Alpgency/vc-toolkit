@@ -1,0 +1,92 @@
+name: twenty
+
+# Self-hosted Twenty CRM for the dealflow agent.
+# The server joins your n8n Docker network so n8n reaches the API at
+# http://twenty-server:3000 without public DNS. Put a TLS reverse proxy in
+# front of 127.0.0.1:${TWENTY_PORT} for the board UI.
+# Copy .env.example to .env and fill it before `docker compose up -d`.
+
+services:
+  server:
+    image: twentycrm/twenty:${TAG:-latest}
+    container_name: twenty-server
+    volumes:
+      - server-local-data:/app/packages/twenty-server/.local-storage
+    ports:
+      - "127.0.0.1:${TWENTY_PORT:-3000}:3000"
+    environment:
+      NODE_PORT: 3000
+      PG_DATABASE_URL: postgres://twenty:${PG_PASSWORD}@twenty-db:5432/twenty
+      SERVER_URL: ${SERVER_URL}
+      REDIS_URL: redis://twenty-redis:6379
+      STORAGE_TYPE: local
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: curl --fail http://localhost:3000/healthz
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+    networks:
+      - default
+      - n8n
+
+  worker:
+    image: twentycrm/twenty:${TAG:-latest}
+    container_name: twenty-worker
+    command: ["yarn", "worker:prod"]
+    volumes:
+      - server-local-data:/app/packages/twenty-server/.local-storage
+    environment:
+      PG_DATABASE_URL: postgres://twenty:${PG_PASSWORD}@twenty-db:5432/twenty
+      SERVER_URL: ${SERVER_URL}
+      REDIS_URL: redis://twenty-redis:6379
+      DISABLE_DB_MIGRATIONS: "true"
+      DISABLE_CRON_JOBS_REGISTRATION: "true"
+      STORAGE_TYPE: local
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+    depends_on:
+      server:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    container_name: twenty-db
+    environment:
+      POSTGRES_USER: twenty
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: twenty
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "twenty"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: twenty-redis
+    command: ["redis-server", "--maxmemory-policy", "noeviction", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+networks:
+  n8n:
+    name: ${N8N_NETWORK:-n8n_default}
+    external: true
+
+volumes:
+  server-local-data:
+  db-data:

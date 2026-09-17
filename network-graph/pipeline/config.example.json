@@ -1,0 +1,32 @@
+{
+  "fund": {
+    "id": "example-ventures",
+    "name": "Example Ventures",
+    "title": "Early-stage venture fund",
+    "location": "Example City"
+  },
+  "partners": [
+    { "shorthand": "maren-okafor-example", "name": "Maren Okafor", "linkedin": "" },
+    { "shorthand": "tobias-reinholt-example", "name": "Tobias Reinholt", "linkedin": "" },
+    { "shorthand": "priya-castellano-example", "name": "Priya Castellano", "linkedin": "" },
+    { "shorthand": "dario-venn-example", "name": "Dario Venn", "linkedin": "" }
+  ],
+  "priority_keywords": ["logistics", "freight", "retail", "stores", "fintech", "bank"],
+  "geo_terms": [],
+  "hq_city": {},
+  "board_title_regex": "\\b(board|trustee|non.?executive director|advisor|advisory)\\b",
+  "companies": [
+    { "name": "Harborline Logistics", "domain": "harborline.example", "sector": "logistics", "size": 4200 },
+    { "name": "Kestrelway Freight", "domain": "kestrelway.example", "sector": "logistics", "size": 900 },
+    { "name": "Brightcart Retail", "domain": "brightcart.example", "sector": "retail", "size": 18000 },
+    { "name": "Pennywhistle Stores", "domain": "pennywhistle.example", "sector": "retail", "size": 7000 },
+    { "name": "Ledgerloom", "domain": "ledgerloom.example", "sector": "fintech", "size": 350 },
+    { "name": "Copperfen Bank", "domain": "copperfen.example", "sector": "fintech", "size": 12000 },
+    { "name": "Quillmere Media", "domain": "quillmere.example", "sector": "media", "size": 1500 },
+    { "name": "Sunmesa Energy", "domain": "sunmesa.example", "sector": "energy", "size": 3000 },
+    { "name": "Clearbrook Health", "domain": "clearbrook.example", "sector": "health", "size": 9000 },
+    { "name": "Tallpine Software", "domain": "tallpine.example", "sector": "software", "size": 600 },
+    { "name": "Orbitquay", "domain": "orbitquay.example", "sector": "software", "size": 250 },
+    { "name": "Fernhollow Foods", "domain": "fernhollow.example", "sector": "food", "size": 11000 }
+  ]
+}

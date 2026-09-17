@@ -1,0 +1,5 @@
+ask/.env
+pipeline/config.json
+pipeline/work/
+out/
+__pycache__/

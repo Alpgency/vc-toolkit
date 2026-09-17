@@ -1,0 +1,45 @@
+{
+  "_note": "FICTIONAL example thesis. EDIT to match your fund. The runtime copy lives inline in the n8n Code nodes \"Build Claude request\" (01) and \"Fan out + build requests\" (01B); weights also in \"Parse + shape\" (01) and \"Shape B\" (01B). Edit all of them together.",
+  "fund": "Example Ventures",
+  "sectors_in_scope": [
+    "B2B software and vertical SaaS",
+    "Fintech infrastructure",
+    "Developer tools and data infrastructure",
+    "Climate and energy software (software only)"
+  ],
+  "hard_out_of_scope_rules": [
+    "Hardware-first or capital-intensive deep tech (chips, robotics, satellites, physical manufacturing)",
+    "Restricted sectors: gambling, weapons, tobacco, adult content"
+  ],
+  "stage": "Pre-seed and seed core; Series A weaker fit, not auto-reject",
+  "geography": "Europe first; North America weaker fit, not auto-reject",
+  "check_size_eur": [
+    250000,
+    1000000
+  ],
+  "scoring_board": {
+    "_note": "Each variable 0-10 from the model. Weighted average x10 = 0-100, computed in workflow code, never trusted from the model. 5 = unknown.",
+    "weights": {
+      "team": 5,
+      "market": 4,
+      "founder_market_fit": 3,
+      "product": 4,
+      "traction": 3,
+      "business_model": 3,
+      "moat": 3,
+      "round_quality": 2,
+      "fund_fit": 3
+    }
+  },
+  "bands": {
+    "green_min": 68,
+    "yellow_min": 50,
+    "_note": "Starting points. Calibrate on deals you have already decided. Hard rules file Out of scope regardless of score."
+  },
+  "portfolio_conflict_check": "Flag direct competitors of portfolio companies for review, never auto-exclude",
+  "portfolio": [
+    "Sample Ledger Co (accounts payable automation)",
+    "Placeholder Grid (energy demand-response software)",
+    "Demo DevTools Inc (API testing)"
+  ]
+}
