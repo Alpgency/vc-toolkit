@@ -29,6 +29,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "dealflow-bulk-test",
+        "authentication": "headerAuth",
         "responseMode": "onReceived",
         "options": {}
       },

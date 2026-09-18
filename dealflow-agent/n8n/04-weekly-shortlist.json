@@ -5,6 +5,7 @@
       "parameters": {
         "httpMethod": "GET",
         "path": "dealflow-shortlist",
+        "authentication": "headerAuth",
         "responseMode": "lastNode",
         "options": {}
       },
