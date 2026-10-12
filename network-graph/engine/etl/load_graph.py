@@ -21,6 +21,13 @@ def q(s):
     return "NULL" if s is None else "'" + str(s).replace("'", "''") + "'"
 
 
+def num(v):
+    # weight and overlap_years go into the SQL unquoted, so only numbers pass
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        raise ValueError("expected a number, got %r" % (v,))
+    return str(v)
+
+
 def name_hash(name, digits):
     return int(hashlib.md5(name.lower().encode()).hexdigest()[:digits], 16)
 
@@ -95,12 +102,16 @@ def main(path):
             "DO UPDATE SET weight = EXCLUDED.weight, evidence = EXCLUDED.evidence;"
             % (q(src["id"]), pid, str(name_hash(comp, 12)) if comp else "NULL",
                daterange(basis.get("window")),
-               "NULL" if years is None else str(years), q(evidence), e.get("weight", 0)))
+               "NULL" if years is None else num(years), q(evidence),
+               num(e.get("weight", 0))))
 
     for s in data.get("advisorySeats") or []:
         # negative id space keeps company anchors clear of provider person ids
         aid = -name_hash(s["company"], 11)
         since = s.get("since")
+        # since lands inside a range literal unescaped, so only a year passes
+        if since and not re.fullmatch(r"\d{4}", str(since)):
+            raise ValueError("since must be a year, got %r" % (since,))
         out.append(
             "INSERT INTO network.people (id, name, current_company) VALUES "
             "(%d, %s, %s) ON CONFLICT (id) DO NOTHING;"

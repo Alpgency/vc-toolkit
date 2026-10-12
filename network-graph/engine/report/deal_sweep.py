@@ -70,8 +70,8 @@ def main():
                 "INSERT INTO network.deal_matches (deal_slug, deal_brief, "
                 "target_company, person_id, path_score, rationale) VALUES "
                 "('%s', '%s', '%s', %s, %s, '%s');"
-                % (q(args.deal), q(args.brief), q(target), r["person_id"],
-                   r["weight"], q(r["evidence"] or r["type"])))
+                % (q(args.deal), q(args.brief), q(target), int(r["person_id"]),
+                   float(r["weight"]), q(r["evidence"] or r["type"])))
         lines.append("")
 
     if inserts:
