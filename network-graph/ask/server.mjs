@@ -65,6 +65,6 @@ createServer(async (req, res) => {
   } catch {
     send(res, 404, "not found", "text/plain");
   }
-}).listen(PORT, () => {
+}).listen(PORT, process.env.HOST || "127.0.0.1", () => {
   console.log(`http://localhost:${PORT}  (ask ${askConfigured ? "on" : "off: set ANTHROPIC_API_KEY"})`);
 });
